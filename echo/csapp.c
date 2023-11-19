@@ -972,12 +972,12 @@ int open_clientfd(char *hostname, char *port) {
         /* 서버에 연결 */
         if (connect(clientfd, p->ai_addr, p->ai_addrlen) != -1) 
             break; /* 성공 */
-        Close(clientfd); /* 연결 실패, 다른 주소 시도.*/
-
-        // if (close(clientfd) < 0) { /* 연결 실패, 다른 주소 시도 */
-        //     fprintf(stderr, "open_clientfd: close failed: %s\n", strerror(errno));
-        //     return -1;
-        // } 
+        
+        //Close(clientfd); /* 연결 실패, 다른 주소 시도.*/
+        if (close(clientfd) < 0) { /* 연결 실패, 다른 주소 시도 */
+            fprintf(stderr, "open_clientfd: close failed: %s\n", strerror(errno));
+            return -1;
+        } 
     } 
 
     /* 정리 작업 */
@@ -1009,6 +1009,7 @@ int open_listenfd(char *port)
     hints.ai_socktype = SOCK_STREAM;             /* 연결 수락 */
     hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG; /* ... 어떤 IP 주소에서든 */
     hints.ai_flags |= AI_NUMERICSERV;            /* ... 포트 번호 사용 */
+
     //Getaddrinfo(NULL, port, &hints, &listp);
     if ((rc = getaddrinfo(NULL, port, &hints, &listp)) != 0) {
         fprintf(stderr, "getaddrinfo 실패 (포트 %s): %s\n", port, gai_strerror(rc));
@@ -1028,11 +1029,12 @@ int open_listenfd(char *port)
         /* 설명자를 주소에 바인드 */
         if (bind(listenfd, p->ai_addr, p->ai_addrlen) == 0)
             break; /* 성공 */
-        Close(listenfd);
-        // if (close(listenfd) < 0) { /* 바인드 실패, 다음 시도 */
-        //     fprintf(stderr, "open_listenfd close 실패: %s\n", strerror(errno));
-        //     return -1;
-        // }
+
+        // Close(listenfd);
+        if (close(listenfd) < 0) { /* 바인드 실패, 다음 시도 */
+            fprintf(stderr, "open_listenfd close 실패: %s\n", strerror(errno));
+            return -1;
+        }
     }
 
     /* 정리 */
