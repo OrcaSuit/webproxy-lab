@@ -957,6 +957,7 @@ int open_clientfd(char *hostname, char *port) {
     hints.ai_socktype = SOCK_STREAM;  /* 연결을 위한 소켓 타입 설정 */
     hints.ai_flags = AI_NUMERICSERV;  /* 숫자 포트 사용 설정 */
     hints.ai_flags |= AI_ADDRCONFIG;  /* 연결에 권장되는 설정 추가 */
+    //Getaddrinfo(hostname, port, &hints, &listp); /*지정 된 조건에 맞는 주소정보를 찾아서 listp가 가리키는 리스트에 저장*/
     if ((rc = getaddrinfo(hostname, port, &hints, &listp)) != 0) {
         fprintf(stderr, "getaddrinfo failed (%s:%s): %s\n", hostname, port, gai_strerror(rc));
         return -2;
@@ -1008,6 +1009,7 @@ int open_listenfd(char *port)
     hints.ai_socktype = SOCK_STREAM;             /* 연결 수락 */
     hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG; /* ... 어떤 IP 주소에서든 */
     hints.ai_flags |= AI_NUMERICSERV;            /* ... 포트 번호 사용 */
+    //Getaddrinfo(NULL, port, &hints, &listp);
     if ((rc = getaddrinfo(NULL, port, &hints, &listp)) != 0) {
         fprintf(stderr, "getaddrinfo 실패 (포트 %s): %s\n", port, gai_strerror(rc));
         return -2;
