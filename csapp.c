@@ -935,63 +935,69 @@ ssize_t Rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen)
 } 
 
 /******************************** 
- * Client/server helper functions
+ * 클라이언트/서버 헬퍼 함수
  ********************************/
 /*
- * open_clientfd - Open connection to server at <hostname, port> and
- *     return a socket descriptor ready for reading and writing. This
- *     function is reentrant and protocol-independent.
+ * open_clientfd - <hostname, port>에서 서버에 연결을 열고
+ *     읽기 및 쓰기 준비가 된 소켓 설명자를 반환합니다. 이
+ *     함수는 재진입 가능하며 프로토콜 독립적입니다.
  *
- *     On error, returns: 
- *       -2 for getaddrinfo error
- *       -1 with errno set for other errors.
+ *     오류 시 반환 값: 
+ *       -2는 getaddrinfo 오류에 대해
+ *       -1은 다른 오류에 대해 errno 설정
  */
 /* $begin open_clientfd */
+/* open_clientfd 함수 시작 */
 int open_clientfd(char *hostname, char *port) {
     int clientfd, rc;
     struct addrinfo hints, *listp, *p;
 
-    /* Get a list of potential server addresses */
+    /* 서버 주소 목록을 얻기 */
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_socktype = SOCK_STREAM;  /* Open a connection */
-    hints.ai_flags = AI_NUMERICSERV;  /* ... using a numeric port arg. */
-    hints.ai_flags |= AI_ADDRCONFIG;  /* Recommended for connections */
-    if ((rc = getaddrinfo(hostname, port, &hints, &listp)) != 0) {
-        fprintf(stderr, "getaddrinfo failed (%s:%s): %s\n", hostname, port, gai_strerror(rc));
-        return -2;
-    }
-  
-    /* Walk the list for one that we can successfully connect to */
-    for (p = listp; p; p = p->ai_next) {
-        /* Create a socket descriptor */
-        if ((clientfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) 
-            continue; /* Socket failed, try the next */
+    hints.ai_socktype = SOCK_STREAM;  /* 연결을 위한 소켓 타입 설정 */
+    hints.ai_flags = AI_NUMERICSERV;  /* 숫자 포트 사용 설정 */
+    hints.ai_flags |= AI_ADDRCONFIG;  /* 연결에 권장되는 설정 추가 */
+    Getaddrinfo(hostname, port, &hints, &listp); //Getaddrinfo 함수를 호출함으로써 listp 에 family, socktype, protocol 등 여러 정보를 받아올수 있다.
 
-        /* Connect to the server */
+    // if ((rc = getaddrinfo(hostname, port, &hints, &listp)) != 0) {
+    //     fprintf(stderr, "getaddrinfo failed (%s:%s): %s\n", hostname, port, gai_strerror(rc));
+    //     return -2;
+    // }
+  
+    /* 연결할 수 있는 주소를 찾기 위해 목록을 순회 */
+    for (p = listp; p; p = p->ai_next) {
+        /* 소켓 디스크립터 생성 */
+        if ((clientfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) 
+            continue; /* 소켓 생성 실패, 다음 주소 시도 */
+
+        /* 서버에 연결 */
         if (connect(clientfd, p->ai_addr, p->ai_addrlen) != -1) 
-            break; /* Success */
-        if (close(clientfd) < 0) { /* Connect failed, try another */  //line:netp:openclientfd:closefd
-            fprintf(stderr, "open_clientfd: close failed: %s\n", strerror(errno));
-            return -1;
-        } 
+            break; /* 성공 */
+        Close(clientfd); /* 연결 실패, 다른 주소 시도.*/
+
+        // if (close(clientfd) < 0) { /* 연결 실패, 다른 주소 시도 */
+        //     fprintf(stderr, "open_clientfd: close failed: %s\n", strerror(errno));
+        //     return -1;
+        // } 
     } 
 
-    /* Clean up */
+    /* 정리 작업 */
     freeaddrinfo(listp);
-    if (!p) /* All connects failed */
+    if (!p) /* 모든 연결 시도 실패 */
         return -1;
-    else    /* The last connect succeeded */
+    else    /* 마지막 연결 시도 성공 */
         return clientfd;
 }
-/* $end open_clientfd */
+/* open_clientfd 함수 끝 */
 
+ 
 /*  
- * open_listenfd - Open and return a listening socket on port. This
- *     function is reentrant and protocol-independent.
+ * open_listenfd - 포트에서 리스닝 소켓을 열고 반환합니다. 이
+ *     함수는 재진입 가능하며 프로토콜 독립적입니다.
  *
- *     On error, returns: 
- *       -2 for getaddrinfo error
- *       -1 with errno set for other errors.
+ *     오류 시 반환 값:
+ *       -2는 getaddrinfo 오류에 대해
+ *       -1은 다른 오류에 대해 errno 설정
  */
 /* $begin open_listenfd */
 int open_listenfd(char *port) 
@@ -999,49 +1005,52 @@ int open_listenfd(char *port)
     struct addrinfo hints, *listp, *p;
     int listenfd, rc, optval=1;
 
-    /* Get a list of potential server addresses */
+    /* 잠재적 서버 주소 목록 가져오기 */
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_socktype = SOCK_STREAM;             /* Accept connections */
-    hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG; /* ... on any IP address */
-    hints.ai_flags |= AI_NUMERICSERV;            /* ... using port number */
-    if ((rc = getaddrinfo(NULL, port, &hints, &listp)) != 0) {
-        fprintf(stderr, "getaddrinfo failed (port %s): %s\n", port, gai_strerror(rc));
-        return -2;
-    }
+    hints.ai_socktype = SOCK_STREAM;             /* 연결 수락 */
+    hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG; /* ... 어떤 IP 주소에서든 */
+    hints.ai_flags |= AI_NUMERICSERV;            /* ... 포트 번호 사용 */
+    Getaddrinfo(NULL, port, &hints, &listp);
 
-    /* Walk the list for one that we can bind to */
+    // if ((rc = getaddrinfo(NULL, port, &hints, &listp)) != 0) {
+    //     fprintf(stderr, "getaddrinfo 실패 (포트 %s): %s\n", port, gai_strerror(rc));
+    //     return -2;
+    // }
+
+    /* 바인드할 수 있는 하나를 찾기 위해 목록 순회 */
     for (p = listp; p; p = p->ai_next) {
-        /* Create a socket descriptor */
+        /* 소켓 설명자 생성 */
         if ((listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) 
-            continue;  /* Socket failed, try the next */
+            continue;  /* 소켓 실패, 다음 시도 */
 
-        /* Eliminates "Address already in use" error from bind */
+        /* "주소 이미 사용 중" 오류 제거 */
         setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR,    //line:netp:csapp:setsockopt
                    (const void *)&optval , sizeof(int));
 
-        /* Bind the descriptor to the address */
+        /* 설명자를 주소에 바인드 */
         if (bind(listenfd, p->ai_addr, p->ai_addrlen) == 0)
-            break; /* Success */
-        if (close(listenfd) < 0) { /* Bind failed, try the next */
-            fprintf(stderr, "open_listenfd close failed: %s\n", strerror(errno));
-            return -1;
-        }
+            break; /* 성공 */
+        Close(listenfd);
+        // if (close(listenfd) < 0) { /* 바인드 실패, 다음 시도 */
+        //     fprintf(stderr, "open_listenfd close 실패: %s\n", strerror(errno));
+        //     return -1;
+        // }
     }
 
-
-    /* Clean up */
+    /* 정리 */
     freeaddrinfo(listp);
-    if (!p) /* No address worked */
+    if (!p) /* 어떤 주소도 작동하지 않음 */
         return -1;
 
-    /* Make it a listening socket ready to accept connection requests */
+    /* 연결 요청을 받을 준비가 된 리스닝 소켓으로 만들기 */
     if (listen(listenfd, LISTENQ) < 0) {
         close(listenfd);
-	return -1;
+	    return -1;
     }
     return listenfd;
 }
 /* $end open_listenfd */
+
 
 /****************************************************
  * Wrappers for reentrant protocol-independent helpers
