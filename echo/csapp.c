@@ -939,7 +939,7 @@ ssize_t Rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen)
  ********************************/
 /*
  * open_clientfd - <hostname, port>에서 서버에 연결을 열고
- *     읽기 및 쓰기 준비가 된 소켓 설명자를 반환합니다. 이
+ *     읽기 및 쓰기 준비가 된 소켓 디스크립터를 반환합니다. 이
  *     함수는 재진입 가능하며 프로토콜 독립적입니다.
  *
  *     오류 시 반환 값: 
@@ -949,7 +949,8 @@ ssize_t Rio_readlineb(rio_t *rp, void *usrbuf, size_t maxlen)
 /* $begin open_clientfd */
 /* open_clientfd 함수 시작 */
 int open_clientfd(char *hostname, char *port) {
-    int clientfd, rc;
+    //int rc;
+    int clientfd;
     struct addrinfo hints, *listp, *p;
 
     /* 서버 주소 목록을 얻기 */
@@ -957,11 +958,12 @@ int open_clientfd(char *hostname, char *port) {
     hints.ai_socktype = SOCK_STREAM;  /* 연결을 위한 소켓 타입 설정 */
     hints.ai_flags = AI_NUMERICSERV;  /* 숫자 포트 사용 설정 */
     hints.ai_flags |= AI_ADDRCONFIG;  /* 연결에 권장되는 설정 추가 */
-    //Getaddrinfo(hostname, port, &hints, &listp); /*지정 된 조건에 맞는 주소정보를 찾아서 listp가 가리키는 리스트에 저장*/
-    if ((rc = getaddrinfo(hostname, port, &hints, &listp)) != 0) {
-        fprintf(stderr, "getaddrinfo failed (%s:%s): %s\n", hostname, port, gai_strerror(rc));
-        return -2;
-    }
+    Getaddrinfo(hostname, port, &hints, &listp); /*지정 된 조건에 맞는 주소정보를 찾아서 listp가 가리키는 리스트에 저장*/
+    
+    // if ((rc = getaddrinfo(hostname, port, &hints, &listp)) != 0) {
+    //     fprintf(stderr, "getaddrinfo failed (%s:%s): %s\n", hostname, port, gai_strerror(rc));
+    //     return -2;
+    // }
   
     /* 연결할 수 있는 주소를 찾기 위해 목록을 순회 */
     for (p = listp; p; p = p->ai_next) {
@@ -1002,7 +1004,8 @@ int open_clientfd(char *hostname, char *port) {
 int open_listenfd(char *port) 
 {
     struct addrinfo hints, *listp, *p;
-    int listenfd, rc, optval=1;
+    //int rc;
+    int listenfd, optval=1;
 
     /* 잠재적 서버 주소 목록 가져오기 */
     memset(&hints, 0, sizeof(struct addrinfo));
@@ -1010,11 +1013,11 @@ int open_listenfd(char *port)
     hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG; /* ... 어떤 IP 주소에서든 */
     hints.ai_flags |= AI_NUMERICSERV;            /* ... 포트 번호 사용 */
 
-    //Getaddrinfo(NULL, port, &hints, &listp);
-    if ((rc = getaddrinfo(NULL, port, &hints, &listp)) != 0) {
-        fprintf(stderr, "getaddrinfo 실패 (포트 %s): %s\n", port, gai_strerror(rc));
-        return -2;
-    }
+    Getaddrinfo(NULL, port, &hints, &listp);
+    // if ((rc = getaddrinfo(NULL, port, &hints, &listp)) != 0) {
+    //     fprintf(stderr, "getaddrinfo 실패 (포트 %s): %s\n", port, gai_strerror(rc));
+    //     return -2;
+    // }
 
     /* 바인드할 수 있는 하나를 찾기 위해 목록 순회 */
     for (p = listp; p; p = p->ai_next) {
@@ -1030,11 +1033,11 @@ int open_listenfd(char *port)
         if (bind(listenfd, p->ai_addr, p->ai_addrlen) == 0)
             break; /* 성공 */
 
-        // Close(listenfd);
-        if (close(listenfd) < 0) { /* 바인드 실패, 다음 시도 */
-            fprintf(stderr, "open_listenfd close 실패: %s\n", strerror(errno));
-            return -1;
-        }
+        Close(listenfd);
+        // if (close(listenfd) < 0) { /* 바인드 실패, 다음 시도 */
+        //     fprintf(stderr, "open_listenfd close 실패: %s\n", strerror(errno));
+        //     return -1;
+        // }
     }
 
     /* 정리 */
