@@ -8,7 +8,6 @@ int main(int argc, char **argv)
 {
 
     int listenfd, connfd; // 각각 서버의 리스닝 소켓, 클라이언트와의 연결 소켓
-
     /*클라이언트 주소 정보를 저장하고 처리하는데 사용*/
     socklen_t clientlen;
     struct sockaddr_storage clientaddr; /* Enough space for any address */

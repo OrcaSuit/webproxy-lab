@@ -1026,11 +1026,11 @@ int open_listenfd(char *port)
         /* 설명자를 주소에 바인드 */
         if (bind(listenfd, p->ai_addr, p->ai_addrlen) == 0)
             break; /* 성공 */
-        Close(listenfd);
-        // if (close(listenfd) < 0) { /* 바인드 실패, 다음 시도 */
-        //     fprintf(stderr, "open_listenfd close 실패: %s\n", strerror(errno));
-        //     return -1;
-        // }
+        //Close(listenfd);
+        if (close(listenfd) < 0) { /* 바인드 실패, 다음 시도 */
+            fprintf(stderr, "open_listenfd close 실패: %s\n", strerror(errno));
+            return -1;
+        }
     }
 
     /* 정리 */

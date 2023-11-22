@@ -7,10 +7,9 @@
             ],
             "defines": [],
             "cStandard": "gnu23",
-            "cppStandard": "gnu++17",
+            "cppStandard": "gnu++14",
             "intelliSenseMode": "linux-gcc-x64",
-            "configurationProvider": "ms-vscode.makefile-tools",
-            "compilerPath": "/usr/bin/gcc-9"
+            "compilerPath": "/usr/bin/gcc"
         }
     ],
     "version": 4
