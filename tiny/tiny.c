@@ -9,7 +9,7 @@
 
 // 함수 선언
 void doit(int fd);
-void read_requesthdrs(rio_t *rp);
+void read_requesthdrs(rio_t *rp, int fd);
 int parse_uri(char *uri, char *filename, char *cgiargs);
 void serve_static(int fd, char *filename, int filesize);
 void get_filetype(char *filename, char *filetype);
@@ -30,7 +30,8 @@ int main(int argc, char **argv)
         exit(1); // 포트 번호가 제공되지 않으면 오류 메시지 출력 후 종료
     }
 
-    listenfd = Open_listenfd(argv[1]); // 지정된 포트에서 리스닝 소켓 열기
+    
+    listenfd = Open_listenfd(argv[1]);// 지정된 포트에서 리스닝 소켓 열기
     while (1)
     {
         clientlen = sizeof(clientaddr);
@@ -52,20 +53,21 @@ void doit(int fd)
     char filename[MAXLINE], cgiargs[MAXLINE];
     rio_t rio;
 
-    /* Read request line and headers */
+    /* request line 과 header 읽기 */
     Rio_readinitb(&rio, fd);
     Rio_readlineb(&rio, buf, MAXLINE);
     printf("Request headers:\n");
     printf("%s", buf);
-    sscanf(buf, "%s %s %s", method, uri, version);
+    sscanf(buf, "%s %s %s", method, uri, version); //메소드 , URI, 버전 파싱
+
+    //요청 처리 부분에서 함수 호출
     if (strcasecmp(method, "GET"))
     {
         clienterror(fd, method, "501", "Not implemented",
                     "Tiny does not implement this method");
         return;
     }
-    
-    read_requesthdrs(&rio);
+    read_requesthdrs(&rio, fd);
 
     /* Parse URI from GET request */
     is_static = parse_uri(uri, filename, cgiargs);
@@ -120,19 +122,42 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
     Rio_writen(fd, body, strlen(body));
 }
 
-// HTTP 요청 헤더를 읽는 함수
-void read_requesthdrs(rio_t *rp)
-{
+//HTTP 요청 헤더를 읽는 함수
+#define MAX_HEADER_LENGTH 8192 // 예시로 8KB로 설정
+void read_requesthdrs(rio_t *rp, int fd) {
     char buf[MAXLINE];
+    int totalLength = 0; // 누적 헤더 길이 초기화
 
-    Rio_readlineb(rp, buf, MAXLINE);
-    while (strcmp(buf, "\r\n"))
-    {
+    while (1) {
         Rio_readlineb(rp, buf, MAXLINE);
-        printf("%s", buf);
+        totalLength += strlen(buf); // 누적 길이 추가
+
+        if (strcmp(buf, "\r\n") == 0 || totalLength > MAX_HEADER_LENGTH) {
+            break; // 빈 줄이거나 최대 길이 초과 시 루프 탈출
+        }
     }
-    return;
+
+    if (totalLength > MAX_HEADER_LENGTH) {
+        // 오류 처리: 헤더 길이 초과
+        clienterror(fd, "Header Too Large", "413", "Request Entity Too Large",
+                        "Request header fields too large");
+            return; // 함수 종료
+    }
 }
+
+//// HTTP 요청 헤더를 읽는 함수2 무한루프 빠짐.
+// void read_requesthdrs(rio_t *rp, int fd)
+// {
+//     char buf[MAXLINE];
+
+//     Rio_readlineb(rp, buf, MAXLINE);
+//     while (strcmp(buf, "\r\n"))
+//     {
+//         Rio_readlineb(rp, buf, MAXLINE);
+//         printf("%s", buf);
+//     }
+//     return;
+// }
 
 // URI를 파싱하여 정적/동적 컨텐츠 결정 함수
 int parse_uri(char *uri, char *filename, char *cgiargs)
@@ -183,25 +208,14 @@ void serve_static(int fd, char *filename, int filesize)
 
     /*Send response body to client*/
     /*숙제 11.9 : 정적 컨텐츠를 처리할 때 요청한 파일을 mmap와 rio_rio_readn 대신,
-     malloc, rio_readn, rio_written을 사용해서 연결 식별자에게 복사*/
+    malloc, rio_readn, rio_written을 사용해서 연결 식별자에게 복사*/
 
-    /*파일 내용을 저장할 메모리 할당*/
-    srcp = (char*)Malloc(filesize);
-
-    /* 파일 열기 */
-    srcfd = Open(filename, O_RDONLY, 0);
-
-    /* 파일 내용을 버퍼에 읽기 */
-    Rio_readn(srcfd, srcp, filesize);
-
-    /* 버퍼의 내용을 클라이언트에게 쓰기*/
-    Rio_writen(fd, srcp, filesize);
-
-    /* 할당된 메모리 해제*/
-    Free(srcp);
-
-    /* 파일 디스크립터 닫기*/
-    Close(srcfd);
+    srcp = (char*)Malloc(filesize);   //파일 내용을 저장할 메모리 할당.
+    srcfd = Open(filename, O_RDONLY, 0); //파일 열기
+    Rio_readn(srcfd, srcp, filesize); //파일 내용을 버퍼에 읽기
+    Rio_writen(fd, srcp, filesize); //버퍼의 내용을 클라이언트에게 쓰기
+    Free(srcp); //할당된 메모리 해제
+    Close(srcfd); //파일 디스크립터 닫기
 
     /*파일 디스크립터를 열고, 파일 내용을 가상 메모리 영역에 매핑,
      그 내용을 네트워크로 전송 후 메모리 매핑을 해제 한 후 디스크립터를 닫음.*/
