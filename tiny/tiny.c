@@ -115,7 +115,7 @@ void read_requesthdrs(rio_t *rp)
 {
   char buf[MAXLINE];
 
-  Rio_readinitb(rp, buf, MAXLINE);
+  Rio_readlineb(rp, buf, MAXLINE);
   while(strcmp(buf, "\r\n")) {
     Rio_readlineb(rp, buf, MAXLINE);
     printf("%s", buf);
@@ -178,7 +178,7 @@ void serve_static(int fd, char *filename, int filesize)
 /*
  * get_filetype - 파일 이름에서 파일 타입을 결정하는 함수
  */
-void get_filetype(char *filename, char *filetype)
+void get_filetype(char *filename, char *filetype) 
 {
     if (strstr(filename, ".html"))
         strcpy(filetype, "text/html");
@@ -188,9 +188,12 @@ void get_filetype(char *filename, char *filetype)
         strcpy(filetype, "image/png");
     else if (strstr(filename, ".jpg"))
         strcpy(filetype, "image/jpeg");
+    else if (strstr(filename, ".mp4"))  // MP4 파일 타입 추가
+        strcpy(filetype, "video/mp4");
     else
         strcpy(filetype, "text/plain");
 }
+
 
 // 동적 컨텐츠를 클라이언트에게 제공하는 함수
 void serve_dynamic(int fd, char *filename, char *cgiargs)
